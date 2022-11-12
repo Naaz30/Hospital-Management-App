@@ -10,8 +10,8 @@ var port = 3001
 //Connection Info
 var con = mysql.createConnection({
   host: 'localhost',
-  user: 'hathalye7',
-  password: 'hrishikesh',
+  user: 'root',
+  password: 'password',
   database: 'HMS',
   multipleStatements: true
 });
@@ -26,6 +26,7 @@ con.connect(function (err) {
 var email_in_use = "";
 var password_in_use = "";
 var who = "";
+var nameInUse = ""; 
 
 var app = express();
 
@@ -44,6 +45,8 @@ app.use(cors());
 app.get('/checkIfPatientExists', (req, res) => {
   let params = req.query;
   let email = params.email;
+  email_in_use = email;
+  nameInUse = params.name;
   let statement = `SELECT * FROM Patient WHERE email = "${email}"`;
   console.log(statement);
   con.query(statement, function (error, results, fields) {
@@ -67,6 +70,7 @@ app.get('/makeAccount', (req, res) => {
   let medications = query.medications;
   let conditions = query.conditions;
   let surgeries = query.surgeries;
+ 
   if(medications===undefined){
     medications="none"
   }
@@ -84,6 +88,7 @@ app.get('/makeAccount', (req, res) => {
     else {
       email_in_use = email;
       password_in_use = password;
+      nameInUse = name;
       who="pat";
       return res.json({
         data: results
@@ -182,6 +187,7 @@ app.get('/checklogin', (req, res) => {
         var json = JSON.parse(string);
         email_in_use = email;
         password_in_use = password;
+        nameInUse = params.name;
         who = "pat";
       }
       return res.json({
@@ -223,6 +229,52 @@ app.get('/checkDoclogin', (req, res) => {
   });
 });
 
+
+
+
+
+
+
+
+//Checks if admin is logged in
+app.get('/checkAdminlogin', (req, res) => {
+  let params = req.query;
+  let email = params.email;
+  let password = params.password;
+  let sql_statement = `SELECT * 
+                       FROM Admins
+                       WHERE email="${email}" AND password="${password}"`;
+  console.log(sql_statement);
+  con.query(sql_statement, function (error, results, fields) {
+    if (error) {
+      console.log("eror");
+      return res.status(500).json({ failed: 'error ocurred' })
+    }
+    else {
+      if (results.length === 0) {
+      } else {
+        var string = JSON.stringify(results);
+        var json = JSON.parse(string);
+        email_in_use = json[0].email;
+        password_in_use = json[0].password;
+        who="doc";
+        console.log(email_in_use);
+        console.log(password_in_use);
+      }
+      return res.json({
+        data: results
+      })
+    };
+  });
+});
+
+
+
+
+
+
+
+
 //Resets Patient Password
 app.post('/resetPasswordPatient', (req, res) => {
   let something = req.query;
@@ -243,6 +295,82 @@ app.post('/resetPasswordPatient', (req, res) => {
     };
   });
 });
+
+
+
+
+
+//Remove Patient
+app.post('/removePatient', (req, res) => {
+  let something = req.query;
+  let email = something.email;
+  let password = "" + something.password;
+  
+  let statement = `DELETE FROM Patient
+                   WHERE email LIKE "${email}";`;
+  console.log(statement);
+  con.query(statement, function (error, results, fields) {
+    if (error) throw error;
+    else {
+      return res.json({
+        data: results
+      })
+    };
+  });
+});
+
+
+
+
+//Update Dues
+app.post('/updateDues', (req, res) => {
+  let something = req.query;
+  let appt_id = something.id;
+  let due = something.due;
+  
+  let statement = `UPDATE Diagnose SET dues= ${due} where appt=${appt_id};`;
+  console.log(statement);
+  con.query(statement, function (error, results, fields) {
+    if (error) throw error;
+    else {
+      return res.json({
+        data: results
+      })
+    };
+  });
+});
+
+
+
+
+
+
+
+//Remove Doctor
+app.post('/removeDoctor', (req, res) => {
+  let something = req.query;
+  let email = something.email;
+  let password = "" + something.password;
+  
+  let statement = `DELETE FROM Doctor
+                   WHERE email LIKE "${email}";`;
+  console.log(statement);
+  con.query(statement, function (error, results, fields) {
+    if (error) throw error;
+    else {
+      return res.json({
+        data: results
+      })
+    };
+  });
+});
+
+
+
+
+
+
+
 
 //Resets Doctor Password
 app.post('/resetPasswordDoctor', (req, res) => {
@@ -267,7 +395,7 @@ app.post('/resetPasswordDoctor', (req, res) => {
 
 //Returns Who is Logged in
 app.get('/userInSession', (req, res) => {
-  return res.json({ email: `${email_in_use}`, who:`${who}`});
+  return res.json({ email: `${email_in_use}`, who:`${who}`, name: `${nameInUse}`});
 });
 
 //Logs the person out
@@ -362,7 +490,7 @@ app.get('/getDateTimeOfAppt', (req, res) => {
 
 //to get all doctor names
 app.get('/docInfo', (req, res) => {
-  let statement = 'SELECT * FROM Doctor';
+  let statement = 'SELECT * FROM Doctor;';
   console.log(statement);
   con.query(statement, function (error, results, fields) {
     if (error) throw error;
@@ -373,6 +501,25 @@ app.get('/docInfo', (req, res) => {
     };
   });
 });
+
+
+
+
+app.get('/depInfo', (req, res) => {
+  let statement = 'SELECT * FROM Departments;';
+  console.log(statement);
+  con.query(statement, function (error, results, fields) {
+    if (error) throw error;
+    else {
+      return res.json({
+        data: results
+      })
+    };
+  });
+});
+
+
+
 
 //To return a particular patient history
 app.get('/OneHistory', (req, res) => {
@@ -490,6 +637,7 @@ app.get('/schedule', (req, res) => {
   let concerns = params.concerns;
   let symptoms = params.symptoms;
   let doctor = params.doc;
+  let due = 0;
   let ndate = new Date(date).toLocaleDateString().substring(0, 10)
   let sql_date = `STR_TO_DATE('${ndate}', '%d/%m/%Y')`;
   //sql to turn string to sql time obj
@@ -502,8 +650,8 @@ app.get('/schedule', (req, res) => {
   con.query(sql_try, function (error, results, fields) {
     if (error) throw error;
     else {
-      let sql_try = `INSERT INTO Diagnose (appt, doctor, diagnosis, prescription) 
-                 VALUES (${id}, "${doctor}", "Not Yet Diagnosed" , "Not Yet Diagnosed")`;
+      let sql_try = `INSERT INTO Diagnose (appt, doctor, diagnosis, prescription, dues) 
+                 VALUES (${id}, "${doctor}", "Not Yet Diagnosed" , "Not Yet Diagnosed", ${due})`;
       console.log(sql_try);
       con.query(sql_try, function (error, results, fields) {
         if (error) throw error;
@@ -535,7 +683,8 @@ app.get('/diagnose', (req, res) => {
   let id = params.id;
   let diagnosis = params.diagnosis;
   let prescription = params.prescription;
-  let statement = `UPDATE Diagnose SET diagnosis="${diagnosis}", prescription="${prescription}" WHERE appt=${id};`;
+  let due = 200;
+  let statement = `UPDATE Diagnose SET diagnosis="${diagnosis}", prescription="${prescription}", dues=${due} WHERE appt=${id};`;
   console.log(statement)
   con.query(statement, function (error, results, fields) {
     if (error) throw error;

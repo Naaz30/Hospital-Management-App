@@ -6,8 +6,19 @@ email varchar(50) PRIMARY KEY,
 password varchar(30) NOT NULL,
 name varchar(50) NOT NULL,
 address varchar(60) NOT NULL,
-gender VARCHAR(20) NOT NULL
+gender VARCHAR(20) NOT NULL,
+DUES int 
 );
+
+
+
+CREATE TABLE Departments(
+id int PRIMARY KEY,
+name varchar(50) NOT NULL
+
+);
+
+
 
 CREATE TABLE MedicalHistory(
 id int PRIMARY KEY,
@@ -31,20 +42,6 @@ starttime TIME NOT NULL,
 endtime TIME NOT NULL,
 status varchar(15) NOT NULL
 );
-
-
-CREATE TABLE Admins(
-email varchar(50) PRIMARY KEY,
-gender varchar(20) NOT NULL,
-password varchar(30) NOT NULL,
-name varchar(50) NOT NULL
-
-);
-
-
-
-
-
 
 CREATE TABLE PatientsAttendAppointments(
 patient varchar(50) NOT NULL,
